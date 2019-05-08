@@ -23,7 +23,4 @@ public final class StatsViewer extends JavaPlugin {
     public boolean onCommand(CommandSender _sender, Command _command, String _label, String[] _args) {
         return false;
     }
-
-    public void onDisable() {
-    }
 }

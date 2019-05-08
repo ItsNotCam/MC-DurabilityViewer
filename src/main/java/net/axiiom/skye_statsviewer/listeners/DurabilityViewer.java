@@ -33,7 +33,7 @@ public class DurabilityViewer implements Listener {
     }
 
     @EventHandler
-    public void onSwitchToTool(PlayerItemHeldEvent _event) {
+    public synchronized void onSwitchToTool(PlayerItemHeldEvent _event) {
         Player player = _event.getPlayer();
         ItemStack newItem = player.getInventory().getItem(_event.getNewSlot());
         ItemStack oldItem = player.getInventory().getItem(_event.getPreviousSlot());
@@ -49,7 +49,7 @@ public class DurabilityViewer implements Listener {
     }
 
     @EventHandler
-    public void onDropTool(PlayerDropItemEvent _event) {
+    public synchronized void onDropTool(PlayerDropItemEvent _event) {
         Player player = _event.getPlayer();
         if (this.durability.containsKey(player.getUniqueId())) {
             ((BossBar)this.durability.get(player.getUniqueId())).removePlayer(player);
@@ -59,7 +59,7 @@ public class DurabilityViewer implements Listener {
     }
 
     @EventHandler
-    public void onPickup(EntityPickupItemEvent _event) {
+    public synchronized void onPickup(EntityPickupItemEvent _event) {
         if (_event.getEntity() instanceof Player) {
             Player player = (Player)_event.getEntity();
             (new DurabilityViewer.PickupItemLater(player, _event.getItem().getItemStack())).runTaskLater(this.plugin, 2L);
@@ -67,7 +67,7 @@ public class DurabilityViewer implements Listener {
     }
 
     @EventHandler
-    public void onSwapHands(PlayerSwapHandItemsEvent _event) {
+    public synchronized void onSwapHands(PlayerSwapHandItemsEvent _event) {
         Player player = _event.getPlayer();
         if (this.isTool(_event.getOffHandItem())) {
             ((BossBar)this.durability.get(player.getUniqueId())).removePlayer(player);
@@ -81,7 +81,7 @@ public class DurabilityViewer implements Listener {
     }
 
     @EventHandler
-    public void onMending(PlayerItemMendEvent _event) {
+    public synchronized void onMending(PlayerItemMendEvent _event) {
         Player player = _event.getPlayer();
         ItemStack heldItem = player.getInventory().getItemInMainHand();
         ItemStack mendedItem = _event.getItem();
@@ -93,7 +93,7 @@ public class DurabilityViewer implements Listener {
     }
 
     @EventHandler
-    public void onItemDamage(PlayerItemDamageEvent _event) {
+    public synchronized void onItemDamage(PlayerItemDamageEvent _event) {
         ItemStack damagedItem = _event.getItem();
         Player player = _event.getPlayer();
         if (!damagedItem.getType().equals(Material.ELYTRA)) {
@@ -108,10 +108,12 @@ public class DurabilityViewer implements Listener {
     }
 
     @EventHandler
-    public void onItemBreak(PlayerItemBreakEvent _event) {
+    public synchronized void onItemBreak(PlayerItemBreakEvent _event) {
         Player player = _event.getPlayer();
-        if (this.isTool(_event.getBrokenItem()) & this.durability.containsKey(player.getUniqueId())) {
-            ((BossBar)this.durability.get(player.getUniqueId())).removePlayer(player);
+
+        boolean brokenIsInHand = _event.getBrokenItem().equals(player.getInventory().getItemInMainHand());
+        if (this.isTool(_event.getBrokenItem()) && brokenIsInHand && this.durability.containsKey(player.getUniqueId())) {
+            this.durability.get(player.getUniqueId()).removePlayer(player);
             this.durability.remove(player.getUniqueId());
         }
 
@@ -122,7 +124,7 @@ public class DurabilityViewer implements Listener {
         int durability = maxDurability - ((Damageable)_item.getItemMeta()).getDamage();
         double progress = (double)durability / (double)maxDurability;
         if (this.durability.containsKey(_player.getUniqueId())) {
-            ((BossBar)this.durability.get(_player.getUniqueId())).removePlayer(_player);
+            this.durability.get(_player.getUniqueId()).removePlayer(_player);
         }
 
         if (progress >= 0.0D) {
