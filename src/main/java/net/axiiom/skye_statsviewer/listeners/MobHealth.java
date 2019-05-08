@@ -5,6 +5,7 @@ import java.util.Iterator;
 import java.util.UUID;
 import net.axiiom.skye_statsviewer.main.StatsViewer;
 import org.bukkit.ChatColor;
+import org.bukkit.entity.Creeper;
 import org.bukkit.entity.Entity;
 import org.bukkit.entity.Mob;
 import org.bukkit.entity.Player;
@@ -13,6 +14,7 @@ import org.bukkit.event.Listener;
 import org.bukkit.event.entity.EntityDamageByEntityEvent;
 import org.bukkit.event.entity.EntityDamageEvent;
 import org.bukkit.event.entity.EntityDeathEvent;
+import org.bukkit.event.entity.EntityExplodeEvent;
 import org.bukkit.scheduler.BukkitRunnable;
 
 public class MobHealth implements Listener {
@@ -65,6 +67,15 @@ public class MobHealth implements Listener {
             this.entitiesHash.remove(deadEntity.getUniqueId());
         }
 
+    }
+
+    @EventHandler
+    public synchronized void onCreeperExplosion(EntityExplodeEvent _event) {
+        Entity deadEntity = _event.getEntity();
+        if(deadEntity instanceof Creeper && this.isTracking(deadEntity)) {
+            deadEntity.setCustomNameVisible(false);
+            this.entitiesHash.remove(deadEntity.getUniqueId());
+        }
     }
 
     private boolean isTracking(Entity _entity) {
