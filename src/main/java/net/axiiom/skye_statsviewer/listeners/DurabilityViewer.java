@@ -1,9 +1,12 @@
 package net.axiiom.skye_statsviewer.listeners;
 
+import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.List;
 import java.util.UUID;
 import net.axiiom.skye_statsviewer.main.StatsViewer;
 import org.bukkit.Bukkit;
+import org.bukkit.ChatColor;
 import org.bukkit.Material;
 import org.bukkit.boss.BarColor;
 import org.bukkit.boss.BarFlag;
@@ -14,6 +17,7 @@ import org.bukkit.event.EventHandler;
 import org.bukkit.event.Listener;
 import org.bukkit.event.entity.EntityExplodeEvent;
 import org.bukkit.event.entity.EntityPickupItemEvent;
+import org.bukkit.event.inventory.InventoryClickEvent;
 import org.bukkit.event.player.PlayerDropItemEvent;
 import org.bukkit.event.player.PlayerItemBreakEvent;
 import org.bukkit.event.player.PlayerItemDamageEvent;
@@ -21,7 +25,9 @@ import org.bukkit.event.player.PlayerItemHeldEvent;
 import org.bukkit.event.player.PlayerItemMendEvent;
 import org.bukkit.event.player.PlayerSwapHandItemsEvent;
 import org.bukkit.inventory.ItemStack;
+import org.bukkit.inventory.PlayerInventory;
 import org.bukkit.inventory.meta.Damageable;
+import org.bukkit.inventory.meta.ItemMeta;
 import org.bukkit.scheduler.BukkitRunnable;
 
 public class DurabilityViewer implements Listener {
@@ -31,6 +37,8 @@ public class DurabilityViewer implements Listener {
     public DurabilityViewer(StatsViewer _plugin) {
         this.plugin = _plugin;
         this.durability = new HashMap();
+
+        new ConstantItemChecker().runTaskTimer(plugin, 0L, 5L);
     }
 
     @EventHandler
@@ -39,22 +47,12 @@ public class DurabilityViewer implements Listener {
         ItemStack newItem = player.getInventory().getItem(_event.getNewSlot());
         ItemStack oldItem = player.getInventory().getItem(_event.getPreviousSlot());
         if (this.isTool(oldItem) && this.durability.containsKey(player.getUniqueId())) {
-            ((BossBar)this.durability.get(player.getUniqueId())).removePlayer(player);
+            this.durability.get(player.getUniqueId()).removePlayer(player);
             this.durability.remove(player.getUniqueId());
         }
 
         if (this.isTool(newItem)) {
             this.updateDurability(player, newItem);
-        }
-
-    }
-
-    @EventHandler
-    public synchronized void onDropTool(PlayerDropItemEvent _event) {
-        Player player = _event.getPlayer();
-        if (this.durability.containsKey(player.getUniqueId())) {
-            ((BossBar)this.durability.get(player.getUniqueId())).removePlayer(player);
-            this.durability.remove(player.getUniqueId());
         }
 
     }
@@ -70,10 +68,6 @@ public class DurabilityViewer implements Listener {
     @EventHandler
     public synchronized void onSwapHands(PlayerSwapHandItemsEvent _event) {
         Player player = _event.getPlayer();
-        if (this.isTool(_event.getOffHandItem())) {
-            ((BossBar)this.durability.get(player.getUniqueId())).removePlayer(player);
-            this.durability.remove(player.getUniqueId());
-        }
 
         if (this.isTool(_event.getMainHandItem())) {
             this.updateDurability(player, _event.getMainHandItem());
@@ -97,25 +91,9 @@ public class DurabilityViewer implements Listener {
     public synchronized void onItemDamage(PlayerItemDamageEvent _event) {
         ItemStack damagedItem = _event.getItem();
         Player player = _event.getPlayer();
-        if (!damagedItem.getType().equals(Material.ELYTRA)) {
-            if (this.isTool(damagedItem)) {
-                DurabilityViewer.UpdateDurabilityRunnable udr = new DurabilityViewer.UpdateDurabilityRunnable(player, damagedItem);
-                udr.runTaskLater(this.plugin, 2L);
-            } else if (damagedItem.getType().equals(Material.ELYTRA)) {
-                this.updateDurability(player, damagedItem);
-            }
-        }
-
-    }
-
-    @EventHandler
-    public synchronized void onItemBreak(PlayerItemBreakEvent _event) {
-        Player player = _event.getPlayer();
-
-        boolean brokenIsInHand = _event.getBrokenItem().equals(player.getInventory().getItemInMainHand());
-        if (this.isTool(_event.getBrokenItem()) && brokenIsInHand && this.durability.containsKey(player.getUniqueId())) {
-            this.durability.get(player.getUniqueId()).removePlayer(player);
-            this.durability.remove(player.getUniqueId());
+        if (isTool(damagedItem)) {
+            DurabilityViewer.UpdateDurabilityRunnable udr = new DurabilityViewer.UpdateDurabilityRunnable(player, damagedItem);
+            udr.runTaskLater(this.plugin, 1L);
         }
 
     }
@@ -133,7 +111,7 @@ public class DurabilityViewer implements Listener {
             BossBar durabilityBar = Bukkit.createBossBar(title, BarColor.GREEN, BarStyle.SOLID, new BarFlag[0]);
             durabilityBar.setProgress(progress);
             durabilityBar.addPlayer(_player);
-            if (progress <= 0.25D && progress > 0.1D) {
+            if (progress <= 0.33D && progress > 0.1D) {
                 durabilityBar.setColor(BarColor.YELLOW);
             } else if (progress <= 0.1D) {
                 durabilityBar.setColor(BarColor.RED);
@@ -213,6 +191,50 @@ public class DurabilityViewer implements Listener {
 
         public void run() {
             DurabilityViewer.this.updateDurability(this.player, this.item);
+
+            if(item.hasItemMeta()) {
+                ItemMeta meta = item.getItemMeta();
+                List<String> lore = null;
+
+                String dur = ChatColor.GRAY + "" + ChatColor.ITALIC + "" + ChatColor.UNDERLINE +  "Durability: "
+                        + (item.getType().getMaxDurability() - ((Damageable) item.getItemMeta()).getDamage())
+                        + "/" + item.getType().getMaxDurability();
+
+                if(meta.hasLore())
+                    lore = meta.getLore();
+                else
+                    lore = new ArrayList<>();
+
+                boolean found = false;
+                for(int i = 0; i < lore.size() && !found; i++)
+                {
+                    if(lore.get(i).contains("Durability: ")) {
+                        lore.set(i, dur);
+                        found = true;
+                    }
+                }
+
+                if(!found)
+                    lore.add(dur);
+
+                meta.setLore(lore);
+                item.setItemMeta(meta);
+            }
+        }
+    }
+
+    class ConstantItemChecker extends BukkitRunnable {
+        public void run() {
+           for(UUID playerUuid : durability.keySet())
+           {
+               Player player = Bukkit.getPlayer(playerUuid);
+               if(player != null && player.isOnline() && !isTool(player.getInventory().getItemInMainHand())) {
+                    durability.get(playerUuid).removePlayer(player);
+                    durability.remove(playerUuid);
+               } else if (player == null || !player.isOnline()) {
+                   durability.remove(playerUuid);
+               }
+           }
         }
     }
 }
