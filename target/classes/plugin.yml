@@ -1,4 +1,4 @@
-name: Skye_StatViewer
+name: SkyeStatViewer
 version: 1.0-SNAPSHOT
 main: net.axiiom.skye_statsviewer.main.StatsViewer
 api-version: 1.13

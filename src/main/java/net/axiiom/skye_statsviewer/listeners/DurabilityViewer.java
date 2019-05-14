@@ -4,6 +4,8 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.UUID;
+import java.util.concurrent.ConcurrentHashMap;
+
 import net.axiiom.skye_statsviewer.main.StatsViewer;
 import org.bukkit.Bukkit;
 import org.bukkit.ChatColor;
@@ -32,11 +34,11 @@ import org.bukkit.scheduler.BukkitRunnable;
 
 public class DurabilityViewer implements Listener {
     private StatsViewer plugin;
-    private HashMap<UUID, BossBar> durability;
+    private ConcurrentHashMap<UUID, BossBar> durability;
 
     public DurabilityViewer(StatsViewer _plugin) {
         this.plugin = _plugin;
-        this.durability = new HashMap();
+        this.durability = new ConcurrentHashMap<>();
 
         new ConstantItemChecker().runTaskTimer(plugin, 0L, 5L);
     }
@@ -98,7 +100,7 @@ public class DurabilityViewer implements Listener {
 
     }
 
-    private void updateDurability(Player _player, ItemStack _item) {
+    private synchronized void updateDurability(Player _player, ItemStack _item) {
         int maxDurability = _item.getType().getMaxDurability();
         int durability = maxDurability - ((Damageable)_item.getItemMeta()).getDamage();
         double progress = (double)durability / (double)maxDurability;

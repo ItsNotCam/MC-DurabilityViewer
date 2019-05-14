@@ -1,19 +1,14 @@
 package net.axiiom.skye_statsviewer.listeners;
 
 import java.text.DecimalFormat;
-import java.util.ConcurrentModificationException;
-import java.util.HashMap;
-import java.util.Iterator;
-import java.util.UUID;
+import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
 
 import net.axiiom.skye_statsviewer.main.StatsViewer;
 import org.bukkit.Bukkit;
 import org.bukkit.ChatColor;
-import org.bukkit.entity.Creeper;
-import org.bukkit.entity.Entity;
-import org.bukkit.entity.Mob;
-import org.bukkit.entity.Player;
+import org.bukkit.attribute.Attribute;
+import org.bukkit.entity.*;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.Listener;
 import org.bukkit.event.entity.*;
@@ -38,24 +33,20 @@ public class MobHealth implements Listener {
     public synchronized void onMobHit(EntityDamageEvent _event) {
         if (_event.getEntity() instanceof Mob) {
             Mob damaged = (Mob)_event.getEntity();
+            double maxHealth = damaged.getAttribute(Attribute.GENERIC_MAX_HEALTH).getValue();
 
             if(damaged.getCustomName() != null && !damaged.getCustomName().contains("♥"))
                 oldEntityName.put(damaged.getUniqueId(), damaged.getCustomName());
 
             double hp = getHP(damaged, _event.getDamage());
             hp = round(hp,1);
-            if (hp >= 1) {
-                if (_event instanceof EntityDamageByEntityEvent) {
-                    EntityDamageByEntityEvent event = (EntityDamageByEntityEvent)_event;
-                    if (!(event.getDamager() instanceof Player)) {
-                        return;
-                    }
-
-                    damaged.setCustomName(hp + "" + ChatColor.RED + " ♥");
-                    damaged.setCustomNameVisible(true);
-                    this.entitiesHash.put(damaged.getUniqueId(), System.currentTimeMillis());
-                }
+            if (hp >= 0.1) {
+                damaged.setCustomName("" + hp + "/" + maxHealth + ChatColor.RED + " ♥");
+                damaged.setCustomNameVisible(true);
+                this.entitiesHash.put(damaged.getUniqueId(), System.currentTimeMillis());
             } else {
+                damaged.setCustomName("0.0" + "/" + maxHealth + ChatColor.RED + " ♥");
+                damaged.setCustomNameVisible(true);
                 entitiesHash.remove(damaged.getUniqueId());
             }
         }
