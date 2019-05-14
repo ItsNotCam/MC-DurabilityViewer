@@ -1,7 +1,6 @@
 package net.axiiom.skye_statsviewer.listeners;
 
 import java.util.ArrayList;
-import java.util.HashMap;
 import java.util.List;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
@@ -9,7 +8,6 @@ import java.util.concurrent.ConcurrentHashMap;
 import net.axiiom.skye_statsviewer.main.StatsViewer;
 import org.bukkit.Bukkit;
 import org.bukkit.ChatColor;
-import org.bukkit.Material;
 import org.bukkit.boss.BarColor;
 import org.bukkit.boss.BarFlag;
 import org.bukkit.boss.BarStyle;
@@ -17,17 +15,13 @@ import org.bukkit.boss.BossBar;
 import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.Listener;
-import org.bukkit.event.entity.EntityExplodeEvent;
 import org.bukkit.event.entity.EntityPickupItemEvent;
-import org.bukkit.event.inventory.InventoryClickEvent;
-import org.bukkit.event.player.PlayerDropItemEvent;
-import org.bukkit.event.player.PlayerItemBreakEvent;
+import org.bukkit.event.inventory.PrepareAnvilEvent;
 import org.bukkit.event.player.PlayerItemDamageEvent;
 import org.bukkit.event.player.PlayerItemHeldEvent;
 import org.bukkit.event.player.PlayerItemMendEvent;
 import org.bukkit.event.player.PlayerSwapHandItemsEvent;
 import org.bukkit.inventory.ItemStack;
-import org.bukkit.inventory.PlayerInventory;
 import org.bukkit.inventory.meta.Damageable;
 import org.bukkit.inventory.meta.ItemMeta;
 import org.bukkit.scheduler.BukkitRunnable;
@@ -78,15 +72,38 @@ public class DurabilityViewer implements Listener {
     }
 
     @EventHandler
+    public synchronized void onAnvilRepair(PrepareAnvilEvent _event)
+    {
+        ItemStack repairedItem = _event.getResult();
+
+        if(repairedItem != null) {
+            int maxDurability = repairedItem.getType().getMaxDurability();
+            int durability = maxDurability;
+
+            if(repairedItem.hasItemMeta() && ((Damageable) repairedItem.getItemMeta()).hasDamage())
+                durability -= ((Damageable) repairedItem.getItemMeta()).getDamage();
+
+            updateLoreDurability(repairedItem, durability, maxDurability);
+        }
+    }
+
+    @EventHandler
     public synchronized void onMending(PlayerItemMendEvent _event) {
         Player player = _event.getPlayer();
         ItemStack heldItem = player.getInventory().getItemInMainHand();
         ItemStack mendedItem = _event.getItem();
-        if (mendedItem.equals(heldItem) && this.isTool(mendedItem)) {
-            DurabilityViewer.UpdateDurabilityRunnable udr = new DurabilityViewer.UpdateDurabilityRunnable(player, heldItem);
-            udr.runTaskLater(this.plugin, 2L);
+
+        if (mendedItem.equals(heldItem)) {
+            DurabilityViewer.UpdateDurabilityRunnable udr = new DurabilityViewer.UpdateDurabilityRunnable(player, mendedItem);
+            udr.runTaskLater(this.plugin, 1L);
         }
 
+        int maxDurability = mendedItem.getType().getMaxDurability();
+        int durability = maxDurability - ((Damageable)mendedItem.getItemMeta()).getDamage();
+        int mendedBy = _event.getRepairAmount();
+
+        durability += mendedBy;
+        updateLoreDurability(mendedItem, durability, maxDurability);
     }
 
     @EventHandler
@@ -98,6 +115,44 @@ public class DurabilityViewer implements Listener {
             udr.runTaskLater(this.plugin, 1L);
         }
 
+        int maxDurability = damagedItem.getType().getMaxDurability();
+        int damagedBy = _event.getDamage();
+
+        int durability = maxDurability - ((Damageable)damagedItem.getItemMeta()).getDamage() - damagedBy;
+        if(durability > maxDurability) durability = maxDurability;
+
+        updateLoreDurability(damagedItem, durability, maxDurability);
+    }
+
+    private synchronized void updateLoreDurability(ItemStack _item, int durability, int _maxDurability)
+    {
+        if(_item.hasItemMeta()) {
+            ItemMeta meta = _item.getItemMeta();
+            List<String> lore = null;
+
+            String dur = ChatColor.GRAY + "" + ChatColor.ITALIC + "" + ChatColor.DARK_AQUA +  "Durability: "
+                    + durability + "/" + _maxDurability;
+
+            if(meta.hasLore())
+                lore = meta.getLore();
+            else
+                lore = new ArrayList<>();
+
+            boolean found = false;
+            for(int i = 0; i < lore.size() && !found; i++)
+            {
+                if(lore.get(i).contains("Durability: ")) {
+                    lore.set(i, dur);
+                    found = true;
+                }
+            }
+
+            if(!found)
+                lore.add(dur);
+
+            meta.setLore(lore);
+            _item.setItemMeta(meta);
+        }
     }
 
     private synchronized void updateDurability(Player _player, ItemStack _item) {
@@ -122,47 +177,6 @@ public class DurabilityViewer implements Listener {
             this.durability.put(_player.getUniqueId(), durabilityBar);
         }
 
-    }
-
-    private boolean isTool(ItemStack _tool) {
-        if (_tool == null) {
-            return false;
-        } else {
-            switch(_tool.getType()) {
-                case WOODEN_AXE:
-                case WOODEN_HOE:
-                case WOODEN_PICKAXE:
-                case WOODEN_SHOVEL:
-                case WOODEN_SWORD:
-                case STONE_AXE:
-                case STONE_HOE:
-                case STONE_PICKAXE:
-                case STONE_SHOVEL:
-                case STONE_SWORD:
-                case IRON_AXE:
-                case IRON_HOE:
-                case IRON_PICKAXE:
-                case IRON_SHOVEL:
-                case IRON_SWORD:
-                case GOLDEN_AXE:
-                case GOLDEN_HOE:
-                case GOLDEN_PICKAXE:
-                case GOLDEN_SHOVEL:
-                case GOLDEN_SWORD:
-                case DIAMOND_AXE:
-                case DIAMOND_HOE:
-                case DIAMOND_PICKAXE:
-                case DIAMOND_SHOVEL:
-                case DIAMOND_SWORD:
-                case BOW:
-                case FISHING_ROD:
-                case SHEARS:
-                case TRIDENT:
-                    return true;
-                default:
-                    return false;
-            }
-        }
     }
 
     class PickupItemLater extends BukkitRunnable {
@@ -193,35 +207,6 @@ public class DurabilityViewer implements Listener {
 
         public void run() {
             DurabilityViewer.this.updateDurability(this.player, this.item);
-
-            if(item.hasItemMeta()) {
-                ItemMeta meta = item.getItemMeta();
-                List<String> lore = null;
-
-                String dur = ChatColor.GRAY + "" + ChatColor.ITALIC + "" + ChatColor.UNDERLINE +  "Durability: "
-                        + (item.getType().getMaxDurability() - ((Damageable) item.getItemMeta()).getDamage())
-                        + "/" + item.getType().getMaxDurability();
-
-                if(meta.hasLore())
-                    lore = meta.getLore();
-                else
-                    lore = new ArrayList<>();
-
-                boolean found = false;
-                for(int i = 0; i < lore.size() && !found; i++)
-                {
-                    if(lore.get(i).contains("Durability: ")) {
-                        lore.set(i, dur);
-                        found = true;
-                    }
-                }
-
-                if(!found)
-                    lore.add(dur);
-
-                meta.setLore(lore);
-                item.setItemMeta(meta);
-            }
         }
     }
 
@@ -237,6 +222,73 @@ public class DurabilityViewer implements Listener {
                    durability.remove(playerUuid);
                }
            }
+        }
+    }
+
+
+
+    private boolean isTool(ItemStack _tool) {
+        if (_tool == null) {
+            return false;
+        } else {
+            switch(_tool.getType()) {
+                case WOODEN_AXE:
+                case WOODEN_HOE:
+                case WOODEN_PICKAXE:
+                case WOODEN_SHOVEL:
+                case WOODEN_SWORD:
+
+                case STONE_AXE:
+                case STONE_HOE:
+                case STONE_PICKAXE:
+                case STONE_SHOVEL:
+                case STONE_SWORD:
+
+                case IRON_AXE:
+                case IRON_HOE:
+                case IRON_PICKAXE:
+                case IRON_SHOVEL:
+                case IRON_SWORD:
+                case IRON_BOOTS:
+                case IRON_CHESTPLATE:
+                case IRON_LEGGINGS:
+                case IRON_HELMET:
+
+                case GOLDEN_AXE:
+                case GOLDEN_HOE:
+                case GOLDEN_PICKAXE:
+                case GOLDEN_SHOVEL:
+                case GOLDEN_SWORD:
+                case GOLDEN_BOOTS:
+                case GOLDEN_CHESTPLATE:
+                case GOLDEN_LEGGINGS:
+                case GOLDEN_HELMET:
+
+                case DIAMOND_AXE:
+                case DIAMOND_HOE:
+                case DIAMOND_PICKAXE:
+                case DIAMOND_SHOVEL:
+                case DIAMOND_SWORD:
+                case DIAMOND_BOOTS:
+                case DIAMOND_CHESTPLATE:
+                case DIAMOND_LEGGINGS:
+                case DIAMOND_HELMET:
+
+                case LEATHER_BOOTS:
+                case LEATHER_CHESTPLATE:
+                case LEATHER_HELMET:
+                case LEATHER_LEGGINGS:
+
+                case BOW:
+                case CROSSBOW:
+                case FISHING_ROD:
+                case SHEARS:
+                case TRIDENT:
+                case FLINT_AND_STEEL:
+                    return true;
+                default:
+                    return false;
+            }
         }
     }
 }

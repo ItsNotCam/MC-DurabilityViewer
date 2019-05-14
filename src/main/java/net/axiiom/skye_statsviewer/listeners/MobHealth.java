@@ -1,6 +1,5 @@
 package net.axiiom.skye_statsviewer.listeners;
 
-import java.text.DecimalFormat;
 import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
 
@@ -31,7 +30,7 @@ public class MobHealth implements Listener {
 
     @EventHandler
     public synchronized void onMobHit(EntityDamageEvent _event) {
-        if (_event.getEntity() instanceof Mob) {
+        if (_event.getEntity() instanceof Mob && !(_event.getEntity() instanceof EnderDragon || _event.getEntity() instanceof Wither)) {
             Mob damaged = (Mob)_event.getEntity();
             double maxHealth = damaged.getAttribute(Attribute.GENERIC_MAX_HEALTH).getValue();
 
@@ -54,7 +53,7 @@ public class MobHealth implements Listener {
 
     @EventHandler
     public synchronized void onMobHeal(EntityRegainHealthEvent _event) {
-        if (_event.getEntity() instanceof Mob) {
+        if (_event.getEntity() instanceof Mob && !(_event.getEntity() instanceof EnderDragon || _event.getEntity() instanceof Wither)) {
             Mob healed = (Mob) _event.getEntity();
             double maxHealth = healed.getAttribute(Attribute.GENERIC_MAX_HEALTH).getValue();
 
