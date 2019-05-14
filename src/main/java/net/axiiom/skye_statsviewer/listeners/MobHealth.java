@@ -53,6 +53,25 @@ public class MobHealth implements Listener {
     }
 
     @EventHandler
+    public synchronized void onMobHeal(EntityRegainHealthEvent _event) {
+        if (_event.getEntity() instanceof Mob) {
+            Mob healed = (Mob) _event.getEntity();
+            double maxHealth = healed.getAttribute(Attribute.GENERIC_MAX_HEALTH).getValue();
+
+            if (healed.getCustomName() != null && !healed.getCustomName().contains("♥"))
+                oldEntityName.put(healed.getUniqueId(), healed.getCustomName());
+
+            double hp = getHP(healed, -1 * _event.getAmount());
+            hp = round(hp, 1);
+            hp = hp > maxHealth ? maxHealth : hp;
+
+            healed.setCustomName("" + hp + "/" + maxHealth + ChatColor.RED + " ♥");
+            healed.setCustomNameVisible(true);
+            this.entitiesHash.put(healed.getUniqueId(), System.currentTimeMillis());
+        }
+    }
+
+    @EventHandler
     public synchronized void onCreeperExplosion(EntityExplodeEvent _event) {
         Entity deadEntity = _event.getEntity();
         if(deadEntity instanceof Creeper && this.isTracking(deadEntity)) {
