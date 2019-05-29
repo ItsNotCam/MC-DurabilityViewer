@@ -42,12 +42,12 @@ public class DurabilityViewer implements Listener {
         Player player = _event.getPlayer();
         ItemStack newItem = player.getInventory().getItem(_event.getNewSlot());
         ItemStack oldItem = player.getInventory().getItem(_event.getPreviousSlot());
-        if (this.isTool(oldItem) && this.durability.containsKey(player.getUniqueId())) {
+        if (this.isDamageable(oldItem) && this.durability.containsKey(player.getUniqueId())) {
             this.durability.get(player.getUniqueId()).removePlayer(player);
             this.durability.remove(player.getUniqueId());
         }
 
-        if (this.isTool(newItem)) {
+        if (this.isDamageable(newItem)) {
             this.updateDurability(player, newItem);
         }
 
@@ -65,7 +65,7 @@ public class DurabilityViewer implements Listener {
     public synchronized void onSwapHands(PlayerSwapHandItemsEvent _event) {
         Player player = _event.getPlayer();
 
-        if (this.isTool(_event.getMainHandItem())) {
+        if (this.isDamageable(_event.getMainHandItem())) {
             this.updateDurability(player, _event.getMainHandItem());
         }
 
@@ -89,6 +89,9 @@ public class DurabilityViewer implements Listener {
 
     @EventHandler
     public synchronized void onMending(PlayerItemMendEvent _event) {
+        if(_event.isCancelled())
+            return;
+
         Player player = _event.getPlayer();
         ItemStack heldItem = player.getInventory().getItemInMainHand();
         ItemStack mendedItem = _event.getItem();
@@ -108,9 +111,12 @@ public class DurabilityViewer implements Listener {
 
     @EventHandler
     public synchronized void onItemDamage(PlayerItemDamageEvent _event) {
+        if(_event.isCancelled())
+            return;
+
         ItemStack damagedItem = _event.getItem();
         Player player = _event.getPlayer();
-        if (isTool(damagedItem)) {
+        if (isDamageable(damagedItem) && player.getInventory().getItemInMainHand().equals(damagedItem)) {
             DurabilityViewer.UpdateDurabilityRunnable udr = new DurabilityViewer.UpdateDurabilityRunnable(player, damagedItem);
             udr.runTaskLater(this.plugin, 1L);
         }
@@ -189,8 +195,8 @@ public class DurabilityViewer implements Listener {
         }
 
         public void run() {
-            if (DurabilityViewer.this.isTool(this.item) && this.player.getInventory().getItemInMainHand().equals(this.item)) {
-                DurabilityViewer.this.updateDurability(this.player, this.item);
+            if (isDamageable(this.item) && this.player.getInventory().getItemInMainHand().equals(this.item)) {
+                updateDurability(this.player, this.item);
             }
 
         }
@@ -206,7 +212,7 @@ public class DurabilityViewer implements Listener {
         }
 
         public void run() {
-            DurabilityViewer.this.updateDurability(this.player, this.item);
+            updateDurability(this.player, this.item);
         }
     }
 
@@ -215,7 +221,7 @@ public class DurabilityViewer implements Listener {
            for(UUID playerUuid : durability.keySet())
            {
                Player player = Bukkit.getPlayer(playerUuid);
-               if(player != null && player.isOnline() && !isTool(player.getInventory().getItemInMainHand())) {
+               if(player != null && player.isOnline() && !isDamageable(player.getInventory().getItemInMainHand())) {
                     durability.get(playerUuid).removePlayer(player);
                     durability.remove(playerUuid);
                } else if (player == null || !player.isOnline()) {
@@ -225,13 +231,11 @@ public class DurabilityViewer implements Listener {
         }
     }
 
-
-
-    private boolean isTool(ItemStack _tool) {
-        if (_tool == null) {
+    private boolean isDamageable(ItemStack _damageable) {
+        if (_damageable == null) {
             return false;
         } else {
-            switch(_tool.getType()) {
+            switch(_damageable.getType()) {
                 case WOODEN_AXE:
                 case WOODEN_HOE:
                 case WOODEN_PICKAXE:
