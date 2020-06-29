@@ -15,9 +15,10 @@ public final class StatsViewer extends JavaPlugin {
 
     public void onEnable() {
         this.durabilityViewer = new DurabilityViewer(this);
-        this.mobHealth = new MobHealth(this);
+//        this.mobHealth = new MobHealth(this);
         this.getServer().getPluginManager().registerEvents(this.durabilityViewer, this);
-        this.getServer().getPluginManager().registerEvents(this.mobHealth, this);
+        this.getServer().getConsoleSender().sendMessage("Durability Viewer Loaded");
+//        this.getServer().getPluginManager().registerEvents(this.mobHealth, this);
     }
 
     public boolean onCommand(CommandSender _sender, Command _command, String _label, String[] _args) {

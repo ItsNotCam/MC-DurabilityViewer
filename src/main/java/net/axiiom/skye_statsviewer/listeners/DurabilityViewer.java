@@ -139,10 +139,7 @@ public class DurabilityViewer implements Listener {
             String dur = ChatColor.GRAY + "" + ChatColor.ITALIC + "" + ChatColor.DARK_AQUA +  "Durability: "
                     + durability + "/" + _maxDurability;
 
-            if(meta.hasLore())
-                lore = meta.getLore();
-            else
-                lore = new ArrayList<>();
+            lore = meta.hasLore() ? meta.getLore() : new ArrayList<>();
 
             boolean found = false;
             for(int i = 0; i < lore.size() && !found; i++)
@@ -169,7 +166,7 @@ public class DurabilityViewer implements Listener {
             this.durability.get(_player.getUniqueId()).removePlayer(_player);
         }
 
-        if (progress >= 0.0D) {
+        if (durability != maxDurability) {
             String title = "Durability: " + durability + "/" + maxDurability;
             BossBar durabilityBar = Bukkit.createBossBar(title, BarColor.GREEN, BarStyle.SOLID, new BarFlag[0]);
             durabilityBar.setProgress(progress);
@@ -186,8 +183,8 @@ public class DurabilityViewer implements Listener {
     }
 
     class PickupItemLater extends BukkitRunnable {
-        private Player player;
-        private ItemStack item;
+        private final Player player;
+        private final ItemStack item;
 
         public PickupItemLater(Player _player, ItemStack _item) {
             this.player = _player;
@@ -203,8 +200,8 @@ public class DurabilityViewer implements Listener {
     }
 
     class UpdateDurabilityRunnable extends BukkitRunnable {
-        private Player player;
-        private ItemStack item;
+        private final Player player;
+        private final ItemStack item;
 
         public UpdateDurabilityRunnable(Player _player, ItemStack _item) {
             this.player = _player;
@@ -232,67 +229,6 @@ public class DurabilityViewer implements Listener {
     }
 
     private boolean isDamageable(ItemStack _damageable) {
-        if (_damageable == null) {
-            return false;
-        } else {
-            switch(_damageable.getType()) {
-                case WOODEN_AXE:
-                case WOODEN_HOE:
-                case WOODEN_PICKAXE:
-                case WOODEN_SHOVEL:
-                case WOODEN_SWORD:
-
-                case STONE_AXE:
-                case STONE_HOE:
-                case STONE_PICKAXE:
-                case STONE_SHOVEL:
-                case STONE_SWORD:
-
-                case IRON_AXE:
-                case IRON_HOE:
-                case IRON_PICKAXE:
-                case IRON_SHOVEL:
-                case IRON_SWORD:
-                case IRON_BOOTS:
-                case IRON_CHESTPLATE:
-                case IRON_LEGGINGS:
-                case IRON_HELMET:
-
-                case GOLDEN_AXE:
-                case GOLDEN_HOE:
-                case GOLDEN_PICKAXE:
-                case GOLDEN_SHOVEL:
-                case GOLDEN_SWORD:
-                case GOLDEN_BOOTS:
-                case GOLDEN_CHESTPLATE:
-                case GOLDEN_LEGGINGS:
-                case GOLDEN_HELMET:
-
-                case DIAMOND_AXE:
-                case DIAMOND_HOE:
-                case DIAMOND_PICKAXE:
-                case DIAMOND_SHOVEL:
-                case DIAMOND_SWORD:
-                case DIAMOND_BOOTS:
-                case DIAMOND_CHESTPLATE:
-                case DIAMOND_LEGGINGS:
-                case DIAMOND_HELMET:
-
-                case LEATHER_BOOTS:
-                case LEATHER_CHESTPLATE:
-                case LEATHER_HELMET:
-                case LEATHER_LEGGINGS:
-
-                case BOW:
-                case CROSSBOW:
-                case FISHING_ROD:
-                case SHEARS:
-                case TRIDENT:
-                case FLINT_AND_STEEL:
-                    return true;
-                default:
-                    return false;
-            }
-        }
+        return _damageable != null && _damageable.getItemMeta() instanceof Damageable;
     }
 }

@@ -1,4 +1,3 @@
-name: SkyeStatViewer
+name: DurabilityViewer
 version: ${project.version}
 main: net.axiiom.skye_statsviewer.main.StatsViewer
-api-version: 1.13
