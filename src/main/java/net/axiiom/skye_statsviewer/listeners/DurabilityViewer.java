@@ -8,6 +8,7 @@ import java.util.concurrent.ConcurrentHashMap;
 import net.axiiom.skye_statsviewer.main.StatsViewer;
 import org.bukkit.Bukkit;
 import org.bukkit.ChatColor;
+import org.bukkit.Material;
 import org.bukkit.boss.BarColor;
 import org.bukkit.boss.BarFlag;
 import org.bukkit.boss.BarStyle;
@@ -75,16 +76,17 @@ public class DurabilityViewer implements Listener {
     public synchronized void onAnvilRepair(PrepareAnvilEvent _event)
     {
         ItemStack repairedItem = _event.getResult();
+//        if(repairedItem == null || repairedItem.getType().equals(Material.AIR)) {
+//            return;
+//        }
 
-        if(repairedItem != null) {
-            int maxDurability = repairedItem.getType().getMaxDurability();
-            int durability = maxDurability;
+        int maxDurability = repairedItem.getType().getMaxDurability();
+        int durability = maxDurability;
 
-            if(repairedItem.hasItemMeta() && ((Damageable) repairedItem.getItemMeta()).hasDamage())
-                durability -= ((Damageable) repairedItem.getItemMeta()).getDamage();
+        if(repairedItem.hasItemMeta() && ((Damageable) repairedItem.getItemMeta()).hasDamage())
+            durability -= ((Damageable) repairedItem.getItemMeta()).getDamage();
 
-            updateLoreDurability(repairedItem, durability, maxDurability);
-        }
+        updateLoreDurability(repairedItem, durability, maxDurability);
     }
 
     @EventHandler
@@ -132,35 +134,49 @@ public class DurabilityViewer implements Listener {
 
     private synchronized void updateLoreDurability(ItemStack _item, int durability, int _maxDurability)
     {
-        if(_item.hasItemMeta()) {
-            ItemMeta meta = _item.getItemMeta();
-            List<String> lore = null;
+        if(!_item.hasItemMeta()) return;
+        ItemMeta meta = _item.getItemMeta();
 
-            String dur = ChatColor.GRAY + "" + ChatColor.ITALIC + "" + ChatColor.DARK_AQUA +  "Durability: "
-                    + durability + "/" + _maxDurability;
+        String dur = ChatColor.GRAY + "" + ChatColor.ITALIC + "" + ChatColor.DARK_AQUA +  "Durability: "
+                + durability + "/" + _maxDurability;
 
-            lore = meta.hasLore() ? meta.getLore() : new ArrayList<>();
+        ArrayList<String> lore = meta.hasLore() ? (ArrayList<String>) meta.getLore() : new ArrayList<>();
 
-            boolean found = false;
-            for(int i = 0; i < lore.size() && !found; i++)
-            {
-                if(lore.get(i).contains("Durability: ")) {
-                    lore.set(i, dur);
-                    found = true;
-                }
+        int index;
+        for(index = 0; index < lore.size(); index++) {
+            if(lore.get(index).contains("Durability: ")) {
+                lore.set(index, dur);
+                break;
             }
-
-            if(!found)
-                lore.add(dur);
-
-            meta.setLore(lore);
-            _item.setItemMeta(meta);
         }
+
+        if(index == lore.size() - 1)
+            lore.add(dur);
+//
+//        boolean found = false;
+//        for(int i = 0; i < lore.size() && !found; i++)
+//        {
+//            if(lore.get(i).contains("Durability: ")) {
+//                lore.set(i, dur);
+//                found = true;
+//            }
+//        }
+//
+//        if(!found)
+//            lore.add(dur);
+
+        meta.setLore(lore);
+        _item.setItemMeta(meta);
     }
 
     private synchronized void updateDurability(Player _player, ItemStack _item) {
         int maxDurability = _item.getType().getMaxDurability();
-        int durability = maxDurability - ((Damageable)_item.getItemMeta()).getDamage();
+        if(!_item.hasItemMeta()) return;
+
+        int damage = ((Damageable)_item.getItemMeta()).getDamage();
+        if(maxDurability <= 0) return;
+
+        int durability = maxDurability - damage;
         double progress = (double)durability / (double)maxDurability;
         if (this.durability.containsKey(_player.getUniqueId())) {
             this.durability.get(_player.getUniqueId()).removePlayer(_player);
