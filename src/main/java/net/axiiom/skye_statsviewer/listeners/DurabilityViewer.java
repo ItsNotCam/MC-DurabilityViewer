@@ -134,12 +134,19 @@ public class DurabilityViewer implements Listener {
 
     private synchronized void updateLoreDurability(ItemStack _item, int durability, int _maxDurability)
     {
-        if(!_item.hasItemMeta()) return;
         ItemMeta meta = _item.getItemMeta();
+        if(meta == null) return;
 
         String dur = ChatColor.GRAY + "" + ChatColor.ITALIC + "" + ChatColor.DARK_AQUA +  "Durability: "
                 + durability + "/" + _maxDurability;
 
+        ArrayList<String> lore = new ArrayList<>();
+        lore.add(dur);
+        meta.setLore(lore);
+        _item.setItemMeta(meta);
+
+
+        /*
         ArrayList<String> lore = meta.hasLore() ? (ArrayList<String>) meta.getLore() : new ArrayList<>();
 
         int index;
@@ -152,21 +159,21 @@ public class DurabilityViewer implements Listener {
 
         if(index == lore.size() - 1)
             lore.add(dur);
-//
-//        boolean found = false;
-//        for(int i = 0; i < lore.size() && !found; i++)
-//        {
-//            if(lore.get(i).contains("Durability: ")) {
-//                lore.set(i, dur);
-//                found = true;
-//            }
-//        }
-//
-//        if(!found)
-//            lore.add(dur);
+
+        boolean found = false;
+        for(int i = 0; i < lore.size() && !found; i++)
+        {
+            if(lore.get(i).contains("Durability: ")) {
+                lore.set(i, dur);
+                found = true;
+            }
+        }
+
+        if(!found)
+            lore.add(dur);
 
         meta.setLore(lore);
-        _item.setItemMeta(meta);
+        _item.setItemMeta(meta);*/
     }
 
     private synchronized void updateDurability(Player _player, ItemStack _item) {
